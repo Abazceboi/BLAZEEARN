@@ -9,8 +9,12 @@ if (isVercel) {
     const tempDbPath = path.join('/tmp', 'users.db');
     if (!fs.existsSync(tempDbPath)) {
         try {
-            fs.copyFileSync(dbPath, tempDbPath);
-            console.log('Copied database to /tmp');
+            if (fs.existsSync(dbPath)) {
+                fs.copyFileSync(dbPath, tempDbPath);
+                console.log('Copied database to /tmp');
+            } else {
+                console.log('Template database users.db not found, creating a new one.');
+            }
         } catch (e) {
             console.error('Failed to copy database to /tmp:', e);
         }
