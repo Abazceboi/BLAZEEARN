@@ -1,6 +1,13 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+let sqlite3;
+let importError = null;
+try {
+    sqlite3 = require('sqlite3').verbose();
+} catch (e) {
+    importError = e;
+    console.error('Failed to import sqlite3:', e.message);
+}
 
+const path = require('path');
 const fs = require('fs');
 const isVercel = process.env.VERCEL || process.env.NOW_BUILDER;
 let dbPath = path.resolve(__dirname, 'users.db');
@@ -22,14 +29,40 @@ if (isVercel) {
     dbPath = tempDbPath;
 }
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error connecting to SQLite database:', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
-        initializeDatabase();
-    }
-});
+let db;
+if (sqlite3) {
+    db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+            console.error('Error connecting to SQLite database:', err.message);
+        } else {
+            console.log('Connected to the SQLite database.');
+            initializeDatabase();
+        }
+    });
+} else {
+    console.warn('Database initialization skipped: sqlite3 is not loaded.');
+    db = {
+        run: function(sql, params, callback) {
+            const cb = typeof params === 'function' ? params : callback;
+            if (cb) cb(new Error('Database not available: ' + (importError ? importError.message : 'Unknown error')));
+            return this;
+        },
+        get: function(sql, params, callback) {
+            const cb = typeof params === 'function' ? params : callback;
+            if (cb) cb(new Error('Database not available: ' + (importError ? importError.message : 'Unknown error')));
+            return this;
+        },
+        all: function(sql, params, callback) {
+            const cb = typeof params === 'function' ? params : callback;
+            if (cb) cb(new Error('Database not available: ' + (importError ? importError.message : 'Unknown error')));
+            return this;
+        },
+        serialize: function(callback) {
+            if (callback) callback();
+            return this;
+        }
+    };
+}
 
 function initializeDatabase() {
     const createTableQuery = `
@@ -237,4 +270,5 @@ function initializeDatabase() {
     });
 }
 
+db.importError = importError;
 module.exports = db;

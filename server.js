@@ -1463,6 +1463,15 @@ app.get('/api/public/top-earners', (req, res) => {
     });
 });
 
+// Debug Endpoint
+app.get('/api/vercel-debug', (req, res) => {
+    res.json({
+        vercel: !!process.env.VERCEL,
+        nodeVersion: process.version,
+        importError: db.importError ? { message: db.importError.message, stack: db.importError.stack } : null
+    });
+});
+
 // Catch-all route to prevent Express from sending HTML errors for unknown routes
 app.use((req, res) => {
     console.log(`[404 NOT FOUND] Route doesn't exist: ${req.method} ${req.url}`);
