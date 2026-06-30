@@ -1,7 +1,23 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.resolve(__dirname, 'users.db');
+const fs = require('fs');
+const isVercel = process.env.VERCEL || process.env.NOW_BUILDER;
+let dbPath = path.resolve(__dirname, 'users.db');
+
+if (isVercel) {
+    const tempDbPath = path.join('/tmp', 'users.db');
+    if (!fs.existsSync(tempDbPath)) {
+        try {
+            fs.copyFileSync(dbPath, tempDbPath);
+            console.log('Copied database to /tmp');
+        } catch (e) {
+            console.error('Failed to copy database to /tmp:', e);
+        }
+    }
+    dbPath = tempDbPath;
+}
+
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error connecting to SQLite database:', err.message);
