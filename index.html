@@ -2210,10 +2210,15 @@ function showPage(pageId) {
     if(panelId === 'tasks' && typeof loadUserTasks === 'function') loadUserTasks();
 
     if (window.innerWidth <= 768) {
-        let sb = document.getElementById('mobile-sidebar');
-        let ov = document.querySelector('.sidebar-overlay');
-        if (sb) sb.classList.remove('active');
-        if (ov) ov.classList.remove('active');
+        let isAdmin = document.getElementById('admin').classList.contains('active');
+        let pageId = isAdmin ? 'admin' : 'dashboard';
+        let page = document.getElementById(pageId);
+        if (page) {
+            let sb = page.querySelector(isAdmin ? '.admin-sidebar' : '.sidebar');
+            let ov = page.querySelector('.sidebar-overlay');
+            if (sb) sb.classList.remove('active');
+            if (ov) ov.classList.remove('active');
+        }
     }
   var panels = document.querySelectorAll('.panel');
   panels.forEach(function(p){ p.classList.remove('active'); });
@@ -3543,10 +3548,14 @@ function showToast(msg,color){
 <script>
 function toggleSidebar() {
   let isAdmin = document.getElementById('admin').classList.contains('active');
-  let sb = document.querySelector(isAdmin ? '.admin-sidebar' : '.sidebar');
-  if(sb) sb.classList.toggle('active');
-  let ov = document.querySelector('.sidebar-overlay');
-  if(ov) ov.classList.toggle('active');
+  let pageId = isAdmin ? 'admin' : 'dashboard';
+  let page = document.getElementById(pageId);
+  if (page) {
+    let sb = page.querySelector(isAdmin ? '.admin-sidebar' : '.sidebar');
+    let ov = page.querySelector('.sidebar-overlay');
+    if(sb) sb.classList.toggle('active');
+    if(ov) ov.classList.toggle('active');
+  }
 }
 </script>
 
