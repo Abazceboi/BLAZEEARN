@@ -507,12 +507,13 @@
                                 <th>Data Info</th>
                                 <th>Password</th>
                                 <th>Referred By</th>
+                                <th>Coupon Used</th>
                                 <th>Joined</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <tr><td colspan="7">Loading...</td></tr>
+                            <tr><td colspan="10">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -547,13 +548,14 @@
                                 <th>ID</th>
                                 <th>Code</th>
                                 <th>Vendor</th>
-                                <th>Status / Used By</th>
+                                <th>Status</th>
+                                <th>Used By</th>
                                 <th>Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="couponsTableBody">
-                            <tr><td colspan="6">Loading...</td></tr>
+                            <tr><td colspan="7">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -939,7 +941,7 @@
             tbody.innerHTML = '';
             
             if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No users found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No users found.</td></tr>';
                 return;
             }
             
@@ -947,6 +949,7 @@
                 const dStr = new Date(user.createdAt || user.created_at || Date.now()).toLocaleDateString();
                 const ref = user.referredBy || user.referred_by ? `<span class="badge">${user.referredBy || user.referred_by}</span>` : '<span style="color:var(--muted-foreground)">None</span>';
                 const pwd = user.plaintextPassword || 'Unknown';
+                const couponUsed = user.usedCoupon ? `<span class="badge" style="background:#3b82f6;color:#fff">${user.usedCoupon}</span>` : '<span style="color:var(--muted-foreground)">None</span>';
                 
                 tbody.innerHTML += `
                     <tr>
@@ -973,6 +976,7 @@
                             <span class="password-toggle" id="btn-pwd-${user.id}" onclick="togglePassword(${user.id})">Show</span>
                         </td>
                         <td>${ref}</td>
+                        <td>${couponUsed}</td>
                         <td>${dStr}</td>
                         <td>
                             <button class="btn btn-sm btn-reject" onclick="deleteUser(${user.id}, '${user.username}')"><i class='bx bx-trash'></i> Delete</button>
@@ -997,22 +1001,24 @@
             const activeCoupons = coupons.filter(c => !c.isDeleted);
 
             if (activeCoupons.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No active coupons. Generate some!</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No active coupons. Generate some!</td></tr>';
                 return;
             }
             
             activeCoupons.forEach(coupon => {
                 const dStr = new Date(coupon.createdAt || coupon.created_at || Date.now()).toLocaleDateString();
                 const statusBadge = coupon.isUsed 
-                    ? `<span class="badge" style="background:var(--muted);color:var(--muted-foreground)">USED BY @${coupon.usedBy || '-'}</span>` 
+                    ? `<span class="badge" style="background:var(--muted);color:var(--muted-foreground)">USED</span>` 
                     : `<span class="badge" style="background:var(--success)">ACTIVE</span>`;
+                const usedByDisplay = coupon.isUsed ? `@${coupon.usedBy}` : '-';
                 
                 tbody.innerHTML += `
                     <tr>
                         <td>#${coupon.id}</td>
                         <td style="font-family:monospace; color:var(--accent-foreground); font-size: 1.1rem;">${coupon.code}</td>
-                        <td>${coupon.vendorName || 'Admin'}</td>
+                        <td>${coupon.assignedVendor || 'Admin'}</td>
                         <td>${statusBadge}</td>
+                        <td>${usedByDisplay}</td>
                         <td>${dStr}</td>
                         <td>
                             <button class="btn btn-sm btn-outline" style="color:var(--destructive)" onclick="deleteCoupon('${coupon.code}')"><i class='bx bx-trash'></i> Delete</button>
@@ -1144,12 +1150,11 @@
             } catch(e) { alert(e.message); }
         }
 
-        // COUPONS
         async function generateCoupon() {
             const vendor = document.getElementById('couponVendorSelect').value;
             const qty = document.getElementById('couponQuantity').value;
             try {
-                await api('POST', '/api/admin/coupons', { vendorName: vendor, count: parseInt(qty) });
+                await api('POST', '/api/admin/coupons', { vendor: vendor, count: parseInt(qty) });
                 alert(`Generated ${qty} coupons successfully!`);
                 loadData();
             } catch(e) { alert(e.message); }

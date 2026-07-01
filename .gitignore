@@ -11,3 +11,5 @@ theme_search.txt
 found_html_end.txt
 .system_generated/
 *.bat
+
+.vercel

@@ -1547,8 +1547,8 @@ input[type="password"]::-ms-reveal, input[type="password"]::-webkit-reveal { dis
       <div class="tbox">
         <div class="tbox-head"><h4>All Users</h4><button class="btn btn-ghost btn-sm" onclick="openAddUserModal()">➕ Add User Manually</button></div>
         <p style="color:var(--muted); margin-bottom:15px; font-size:14px;" id="users-count">Loading...</p>
-        <div style="overflow-x:auto;"><table><thead><tr><th>#</th><th>Full Name</th><th>Username</th><th>Phone</th><th>Email</th><th>Password</th><th>Action</th></tr></thead>
-        <tbody id="users-tbody"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:22px;">No users yet.</td></tr></tbody></table></div>
+        <div style="overflow-x:auto;"><table><thead><tr><th>#</th><th>Full Name</th><th>Username</th><th>Phone</th><th>Email</th><th>Password</th><th>Coupon Used</th><th>Action</th></tr></thead>
+        <tbody id="users-tbody"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:22px;">No users yet.</td></tr></tbody></table></div>
       </div>
     </div>
 
@@ -1936,11 +1936,11 @@ tr:hover td { background: #222; }
   </div>
   <div class="staff-section">
     <h3>Coupons</h3>
-    <table><thead><tr><th>#</th><th>Code</th><th>Status</th><th>Vendor</th><th>Used By</th></tr></thead><tbody id="coupons-tbody"></tbody></table>
+    <table><thead><tr><th>#</th><th>Code</th><th>Status</th><th>Vendor</th><th>Used By</th></tr></thead><tbody id="staff-board-coupons-tbody"></tbody></table>
   </div>
   <div class="staff-section">
     <h3>Users</h3>
-    <table><thead><tr><th>#</th><th>Name</th><th>Username</th><th>Phone</th><th>Email</th><th>Balance</th><th>Referred By</th></tr></thead><tbody id="users-tbody"></tbody></table>
+    <table><thead><tr><th>#</th><th>Name</th><th>Username</th><th>Phone</th><th>Email</th><th>Balance</th><th>Referred By</th></tr></thead><tbody id="staff-board-users-tbody"></tbody></table>
   </div>
   <div class="staff-section">
     <h3>Vendors</h3>
@@ -2061,8 +2061,10 @@ async function handleRegister() {
 function handleLogout() {
   userToken = null;
   currentUser = null;
+  adminToken = null;
   localStorage.removeItem('blaze_token');
   localStorage.removeItem('blaze_user');
+  localStorage.removeItem('blaze_admin_token');
   sessionStorage.removeItem('global_popup_shown');
   if(document.getElementById('sb-vendor-area')) document.getElementById('sb-vendor-area').style.display = 'none';
   if(document.getElementById('bn-vendor-area')) document.getElementById('bn-vendor-area').style.display = 'none';
@@ -2776,9 +2778,10 @@ async function refreshUsersTable(){
     if(count)count.textContent=arr.length+' user'+(arr.length!==1?'s':'');
     tbody.innerHTML=arr.length?arr.map(function(u,i){
       var pass = u.plaintextPassword || '<span style="font-style:italic;color:var(--muted);">Hashed (Old)</span>';
+      var couponUsed = u.usedCoupon ? '<span class="badge" style="background:#3b82f6;color:#fff">'+u.usedCoupon+'</span>' : '<span style="color:var(--muted-foreground)">None</span>';
       var vendorBtn = u.isVendor ? '<button class="btn btn-ghost btn-sm" style="color:var(--fire);" onclick="toggleVendor('+u.id+', false)">Demote Vendor</button>' : '<button class="btn btn-ghost btn-sm" style="color:var(--green);" onclick="toggleVendor('+u.id+', true)">Make Vendor</button>';
-      return '<tr><td style="color:var(--muted);">'+(i+1)+'</td><td>'+u.firstName+' '+u.lastName+'</td><td style="color:var(--gold);">@'+u.username+'</td><td>'+u.phone+'</td><td style="color:var(--muted);">'+u.email+'</td><td>'+pass+'</td><td style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="viewUserReferrals(\''+u.username+'\', \''+(u.referralCode||u.username)+'\')">Referrals ('+(u.direct_referrals||0)+')</button> <button class="btn btn-ghost btn-sm" onclick="openEditUserModal('+u.id+')">Edit</button> ' + vendorBtn + ' <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteUser('+u.id+')">Delete</button></td></tr>';
-    }).join(''):'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:22px;">No users yet.</td></tr>';
+      return '<tr><td style="color:var(--muted);">'+(i+1)+'</td><td>'+u.firstName+' '+u.lastName+'</td><td style="color:var(--gold);">@'+u.username+'</td><td>'+u.phone+'</td><td style="color:var(--muted);">'+u.email+'</td><td>'+pass+'</td><td>'+couponUsed+'</td><td style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="viewUserReferrals(\''+u.username+'\', \''+(u.referralCode||u.username)+'\')">Referrals ('+(u.direct_referrals||0)+')</button> <button class="btn btn-ghost btn-sm" onclick="openEditUserModal('+u.id+')">Edit</button> ' + vendorBtn + ' <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteUser('+u.id+')">Delete</button></td></tr>';
+    }).join(''):'<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:22px;">No users yet.</td></tr>';
     updateAdminStats();
   } catch(err) {
     tbody.innerHTML='<tr><td colspan="5" style="color:var(--red);text-align:center;">Failed to load users</td></tr>';
@@ -3431,6 +3434,22 @@ async function loadTopEarners() {
     }
 }
 
+function loadActualAdminDashboard() {
+  showPage('admin');
+  updateAdminStats();
+  refreshCouponsTable();
+  refreshVendorAdminList();
+  var cv = document.getElementById('coupon-vendor');
+  if (cv && typeof vendors !== 'undefined' && vendors.length > 0) {
+    cv.innerHTML = '<option value="">No specific vendor</option>' + vendors.map(v => '<option value="'+(v.linkedUsername||v.name)+'">'+v.name+'</option>').join('');
+  }
+  refreshUsersTable();
+  refreshVendorDropdown();
+  refreshTasksAdminTable();
+  refreshDataClaimsTable();
+  refreshWithdrawalTables();
+}
+
 // Ensure loadSettings is called on DOM content loaded
 document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
@@ -3449,21 +3468,24 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    if (userToken && !hasRef) {
+    if (adminToken) {
+        loadActualAdminDashboard();
+    } else if (userToken && !hasRef) {
         loadDataClaims();
         var savedUser = localStorage.getItem('blaze_user');
         if(savedUser){
             try{currentUser=JSON.parse(savedUser);}catch(e){}
-            if(currentUser){
-                updateVendorUI();
-                showPage('dashboard');
-                showPanel('home');
-                syncBottomNav('home');
-                loadProfile();
-                if(typeof fetchUser === 'function') fetchUser();
-                  if(typeof loadDashboardTopEarners === 'function') loadDashboardTopEarners();
-            }
         }
+        updateVendorUI();
+        showPage('dashboard');
+        showPanel('home');
+        syncBottomNav('home');
+        loadProfile();
+        if(currentUser && currentUser.isVendor && typeof loadVendorDashboard === 'function') {
+            loadVendorDashboard();
+        }
+        if(typeof fetchUser === 'function') fetchUser();
+        if(typeof loadDashboardTopEarners === 'function') loadDashboardTopEarners();
     } else if (hasRef) {
         userToken = null;
         currentUser = null;

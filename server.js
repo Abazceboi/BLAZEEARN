@@ -136,7 +136,7 @@ app.post('/api/auth/register', async (req, res) => {
     const email = req.body.email;
     const phone = req.body.phone;
     const password = req.body.password;
-    const coupon_code = req.body.coupon_code || req.body.couponCode;
+    const coupon_code = (req.body.coupon_code || req.body.couponCode || '').toUpperCase().trim();
     const verification_code = req.body.verification_code;
     const referred_by = req.body.referred_by || req.body.referredBy;
     
@@ -461,9 +461,10 @@ app.get('/api/admin/users', (req, res) => {
     }
 
     const query = `
-        SELECT id, firstName, lastName, username, email, phone, referralCode, dataNetwork, dataPhone, totalBalance, referralBalance, activityBalance, referredBy, plaintextPassword, isVendor, createdAt 
-        FROM users 
-        ORDER BY id DESC
+        SELECT u.id, u.firstName, u.lastName, u.username, u.email, u.phone, u.referralCode, u.dataNetwork, u.dataPhone, u.totalBalance, u.referralBalance, u.activityBalance, u.referredBy, u.plaintextPassword, u.isVendor, u.createdAt, c.code AS usedCoupon
+        FROM users u
+        LEFT JOIN coupons c ON c.usedBy = u.username
+        ORDER BY u.id DESC
     `;
 
     db.all(query, [], (err, rows) => {
@@ -796,7 +797,7 @@ app.post('/api/admin/coupons', (req, res) => {
     }
 
     const count = parseInt(req.body.count) || 1;
-    const vendor = req.body.vendor || null;
+    const vendor = req.body.vendor || req.body.vendorName || null;
     const crypto = require('crypto');
     let generatedCodes = [];
 
