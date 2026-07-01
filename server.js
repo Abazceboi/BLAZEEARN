@@ -800,20 +800,32 @@ app.post('/api/admin/coupons', (req, res) => {
     const vendor = req.body.vendor || req.body.vendorName || null;
     const crypto = require('crypto');
     let generatedCodes = [];
+    let promises = [];
 
-    // Begin a transaction essentially by preparing statement
-    const stmt = db.prepare('INSERT INTO coupons (code, assignedVendor) VALUES (?, ?)');
-    
     for(let i = 0; i < count; i++) {
         const newCode = 'BLZ-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-        stmt.run(newCode, vendor, function(err) {
-            if (err) console.error('Error inserting coupon:', err.message);
-        });
         generatedCodes.push(newCode);
+        
+        const p = new Promise((resolve, reject) => {
+            db.run('INSERT INTO coupons (code, assignedVendor) VALUES (?, ?)', [newCode, vendor], function(err) {
+                if (err) {
+                    console.error('Error inserting coupon:', err.message);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+        promises.push(p);
     }
-    stmt.finalize();
 
-    res.status(201).json({ message: `${count} coupons generated`, codes: generatedCodes });
+    Promise.all(promises)
+        .then(() => {
+            res.status(201).json({ message: `${count} coupons generated`, codes: generatedCodes });
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Database error generating coupons.' });
+        });
 });
 
 // Admin Endpoint to list all coupons
